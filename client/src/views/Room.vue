@@ -182,6 +182,7 @@ const totalSecrets = ref(0)
 const loadingMore = ref(false)
 const listOffset = ref(0)
 const LIST_LIMIT = 10
+const requestToken = ref(0)
 
 function adjustColor(hex, percent) {
   const num = parseInt(hex.replace('#', ''), 16)
@@ -213,20 +214,6 @@ function formatDate(dateStr) {
   if (days === 1) return '昨天'
   if (days < 7) return `${days}天前`
   return date.toLocaleDateString('zh-CN')
-}
-
-async function loadRoom() {
-  loading.value = true
-  error.value = ''
-  try {
-    const res = await fetch(`/api/rooms/${roomId.value}`)
-    if (!res.ok) throw new Error('房间不存在')
-    room.value = await res.json()
-  } catch (e) {
-    error.value = e.message || '加载房间失败'
-  } finally {
-    loading.value = false
-  }
 }
 
 async function submitSecret() {
@@ -278,22 +265,26 @@ function resetForm() {
 }
 
 async function fetchRandomSecret() {
+  const token = requestToken.value
   randomLoading.value = true
   try {
     const res = await fetch(`/api/rooms/${roomId.value}/secrets/random`)
     const data = await res.json()
+    if (token !== requestToken.value) return
     hasRandomSecret.value = data.hasSecret
     randomSecret.value = data.secret
     randomMessage.value = data.message
   } catch (e) {
+    if (token !== requestToken.value) return
     hasRandomSecret.value = false
     randomMessage.value = '暂时无法获取秘密'
   } finally {
-    randomLoading.value = false
+    if (token === requestToken.value) randomLoading.value = false
   }
 }
 
 async function fetchSecretList(reset = false) {
+  const token = requestToken.value
   if (reset) {
     listOffset.value = 0
     secretList.value = []
@@ -305,14 +296,18 @@ async function fetchSecretList(reset = false) {
       `/api/rooms/${roomId.value}/secrets?limit=${LIST_LIMIT}&offset=${listOffset.value}`
     )
     const data = await res.json()
+    if (token !== requestToken.value) return
     secretList.value = reset ? data.secrets : [...secretList.value, ...data.secrets]
     totalSecrets.value = data.total
     listOffset.value += data.secrets.length
   } catch (e) {
+    if (token !== requestToken.value) return
     console.error('加载秘密列表失败:', e)
   } finally {
-    listLoading.value = false
-    loadingMore.value = false
+    if (token === requestToken.value) {
+      listLoading.value = false
+      loadingMore.value = false
+    }
   }
 }
 
@@ -324,16 +319,79 @@ function goHome() {
   router.push('/')
 }
 
+function resetAllState() {
+  loading.value = true
+  error.value = ''
+  room.value = null
+
+  secretContent.value = ''
+  submitting.value = false
+  submitError.value = ''
+  showAnimation.value = false
+  showComplete.value = false
+
+  randomLoading.value = true
+  hasRandomSecret.value = false
+  randomSecret.value = null
+  randomMessage.value = ''
+
+  listLoading.value = true
+  secretList.value = []
+  totalSecrets.value = 0
+  loadingMore.value = false
+  listOffset.value = 0
+
+  requestToken.value += 1
+}
+
+async function loadRoomData(token) {
+  try {
+    const [roomRes, randomRes, listRes] = await Promise.all([
+      fetch(`/api/rooms/${roomId.value}`),
+      fetch(`/api/rooms/${roomId.value}/secrets/random`),
+      fetch(`/api/rooms/${roomId.value}/secrets?limit=${LIST_LIMIT}&offset=0`)
+    ])
+
+    if (token !== requestToken.value) return
+
+    if (!roomRes.ok) throw new Error('房间不存在')
+    const roomData = await roomRes.json()
+    const randomData = await randomRes.json()
+    const listData = await listRes.json()
+
+    if (token !== requestToken.value) return
+
+    room.value = roomData
+
+    hasRandomSecret.value = randomData.hasSecret
+    randomSecret.value = randomData.secret
+    randomMessage.value = randomData.message
+    randomLoading.value = false
+
+    secretList.value = listData.secrets
+    totalSecrets.value = listData.total
+    listOffset.value = listData.secrets.length
+    listLoading.value = false
+
+    loading.value = false
+  } catch (e) {
+    if (token !== requestToken.value) return
+    error.value = e.message || '加载房间失败'
+    loading.value = false
+    randomLoading.value = false
+    listLoading.value = false
+  }
+}
+
 watch(roomId, () => {
-  loadRoom()
-  fetchRandomSecret()
-  fetchSecretList(true)
+  const token = requestToken.value + 1
+  resetAllState()
+  loadRoomData(token)
 })
 
 onMounted(() => {
-  loadRoom()
-  fetchRandomSecret()
-  fetchSecretList(true)
+  const token = requestToken.value
+  loadRoomData(token)
 })
 </script>
 
