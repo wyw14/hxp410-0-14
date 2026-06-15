@@ -1,0 +1,44 @@
+[
+  {
+    "id": "family",
+    "name": "亲情房间",
+    "icon": "👨‍👩‍👧",
+    "description": "关于家人的秘密与忏悔",
+    "color": "#FF6B6B"
+  },
+  {
+    "id": "friendship",
+    "name": "友情房间",
+    "icon": "🤝",
+    "description": "关于朋友的秘密与忏悔",
+    "color": "#4ECDC4"
+  },
+  {
+    "id": "work",
+    "name": "工作房间",
+    "icon": "💼",
+    "description": "关于职场的秘密与忏悔",
+    "color": "#45B7D1"
+  },
+  {
+    "id": "love",
+    "name": "爱情房间",
+    "icon": "💕",
+    "description": "关于爱人的秘密与忏悔",
+    "color": "#F38181"
+  },
+  {
+    "id": "school",
+    "name": "校园房间",
+    "icon": "🎓",
+    "description": "关于校园的秘密与忏悔",
+    "color": "#AA96DA"
+  },
+  {
+    "id": "other",
+    "name": "其他房间",
+    "icon": "🌈",
+    "description": "其他难以归类的秘密",
+    "color": "#FCBAD3"
+  }
+]
